@@ -401,8 +401,7 @@ void OS::AfficherHardDrive()
 	
 	for (int i = 1; i <= 8; i++)
 	{
-		
-		
+		HDList.push_back(lireFichier(i));
 	}
 	
 	
