@@ -36,7 +36,6 @@ struct file
     uint8_t premierBloc;
 };
 
-
 /****************************************************************
  * Headers
  ****************************************************************/
@@ -71,7 +70,7 @@ public:
 	~OS();
 	void Run();
 	void read(char nomFichier[6], int pos, int nbCaracteres, string tampLecture);
-	void write(char nomFichier[6], int pos, int nbCaracteres, char* TampEcriture);
+	void write(char nomFichier[6], int pos, int nbCaracteres, string TampEcriture);
 	void deleteEOF(char nomFichier[6], int pos);
 	
 private:
@@ -95,8 +94,6 @@ private:
     unsigned short runningtime, LastTime;
     struct timeb tp;
     vector<file> fileList;
-	
-	
 };
 
 /****************************************************************
@@ -266,7 +263,7 @@ void OS::read(char nomFichier[6], int pos, int nbCaracteres, string tampLecture)
 	tampLecture = tampLecture.substr(firstCaractToRemove, nbCaracteres);
 }
 
-void OS::write(char nomFichier[6], int pos, int nbCaracteres, char* TampEcriture)
+void OS::write(char nomFichier[6], int pos, int nbCaracteres, string TampEcriture)
 {
 	int var;
 	file fichier = trouverFichier(nomFichier, true, &var);
@@ -278,7 +275,7 @@ void OS::write(char nomFichier[6], int pos, int nbCaracteres, char* TampEcriture
 		int dernierBloc = fichier.taille/4;
 		int nouveauDernierBloc = (pos+nbCaracteres)/4;
 		int blocAjouter = nouveauDernierBloc - dernierBloc;
-		int bloc = file.premierBloc;
+		int bloc = fichier.premierBloc;
 		int lastBloc;
 		while (bloc != -1)
 		{
@@ -312,8 +309,8 @@ void OS::write(char nomFichier[6], int pos, int nbCaracteres, char* TampEcriture
 			lireBloc(bloc, data);
 			for (int j = pos%4; j < 4; j++)
 			{
-				data[j] = tampEcriture[0];
-				tampEcriture = tampEcriture.substring(1, tampEcriture.length);
+				data[j] = TampEcriture[0];
+				TampEcriture = TampEcriture.substr(1, TampEcriture.length());
 			}
 			ecrireBloc(bloc, data);
 		}
@@ -322,8 +319,8 @@ void OS::write(char nomFichier[6], int pos, int nbCaracteres, char* TampEcriture
 			lireBloc(bloc, data);
 			for (int j = 0; j < pos+nbCaracteres%4; j++)
 			{
-				data[j] = tampEcriture[0];
-				tampEcriture = tampEcriture.substring(1, tampEcriture.length);
+				data[j] = TampEcriture[0];
+				TampEcriture = TampEcriture.substr(1, TampEcriture.length());
 			}
 			ecrireBloc(bloc, data);
 		}
@@ -331,8 +328,8 @@ void OS::write(char nomFichier[6], int pos, int nbCaracteres, char* TampEcriture
 		{
 			for (int j = 0; j < 4; j++)
 			{
-				data[j] = tampEcriture[0];
-				tampEcriture = tampEcriture.substring(1, tampEcriture.length);
+				data[j] = TampEcriture[0];
+				TampEcriture = TampEcriture.substr(1, TampEcriture.length());
 			}
 			ecrireBloc(bloc, data);
 		}			
@@ -348,7 +345,7 @@ void OS::deleteEOF(char nomFichier[6], int pos)
 	if (fichier.taille < pos)
 		return;
 	fichier.taille = pos;
-	int bloc = fichier.premierBloc
+	int bloc = fichier.premierBloc;
 	for(int i=0; i <= pos/4; i++)
 	{
 		bloc = blocSuivant(bloc);
@@ -356,8 +353,8 @@ void OS::deleteEOF(char nomFichier[6], int pos)
 	int prochainBloc = blocSuivant(bloc);
 	while (bloc != -1)
 	{
-		ecrireBloc(bloc, bloc);
-		free(bloc);
+		ecrireFat(bloc, bloc);
+		freeBloc(bloc);
 		bloc = prochainBloc;
 		prochainBloc = blocSuivant(bloc);
 	}
@@ -533,7 +530,7 @@ void OS::ecrireBloc(uint8_t pos, char data[4])
 	HD.writeBlock(pos, data);
 }
 
-file OS::trouverFichier(char nomFichier[6], bool create = false, int *pos = NULL)
+file OS::trouverFichier(char nomFichier[6], bool create, int *pos)
 {
 	
 	for(int i=1; i < 10; i++)
@@ -616,8 +613,8 @@ int OS::blocSuivant(uint8_t bloc)
 void OS::freeBloc(int bloc)
 {
 	file free = lireFichier(0);
-	ecrireBloc(bloc, free.premierBloc);
-	file.premierBloc = bloc;
+	ecrireFat(bloc, free.premierBloc);
+	free.premierBloc = bloc;
 	free.taille += 4;
 	ecrireFichier(0, free);
 }
@@ -625,14 +622,16 @@ void OS::freeBloc(int bloc)
 int OS::newBloc()
 {
 	file free = lireFichier(0);
-	if (free.size == 0)
+	if (free.taille == 0)
 		return -1;
 	
+	int bloc = free.premierBloc;
 	int prochainBlocLibre= lireFat(free.premierBloc);
 	ecrireFat(bloc,bloc);
+	free.premierBloc = prochainBlocLibre;
 	free.taille -= 4;
 	ecrireFichier(0, free);
-	return free.premierBloc;
+	return bloc;
 }
 
 int main()
