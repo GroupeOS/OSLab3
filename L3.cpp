@@ -119,7 +119,7 @@ void HardDrive::readBlock(uint8_t NumeroBlock, char*& TampLecture)
 	}
 }
 
-void HardDrive::writeBlock (uint8_t NumeroBlock, char* TampEcriture)
+void HardDrive::writeBlock(uint8_t NumeroBlock, char* TampEcriture)
 {
 	//if(NumeroBlock <256)
 	{
@@ -127,7 +127,7 @@ void HardDrive::writeBlock (uint8_t NumeroBlock, char* TampEcriture)
 	}
 }
 
-file HardDrive::readfile (uint8_t NumeroFicher)
+file HardDrive::readfile(uint8_t NumeroFicher)
 {
 	if(NumeroFicher < 10)
 	{
