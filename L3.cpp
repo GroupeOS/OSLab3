@@ -370,9 +370,7 @@ void OS::AfficherStat()
 }
 
 void OS::AfficherHardDrive()
-{   
-	vector<file> HDList;
-	
+{   	
 	char* buffer = new char[4];
 	
 	system("clear");
@@ -397,14 +395,14 @@ void OS::AfficherHardDrive()
 	}
 	k = 0;
 	
-	vector<file>::iterator itFile = HDList.begin();
+	vector<file> HDList;
 	
 	for (int i = 1; i <= 8; i++)
 	{
 		HDList.push_back(lireFichier(i));
 	}
 	
-	
+	vector<file>::iterator itFile = HDList.begin();
 	
 	cout << "Liste des fichiers" << endl;
 	for(itFile; itFile != HDList.end(); itFile++)
