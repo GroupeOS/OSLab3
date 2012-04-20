@@ -1,3 +1,15 @@
+/****************************************************************
+ * Lab3.cpp
+ *
+ * François Potvin Naud,
+ * Michaël Guérette,
+ * Mathieu Lapierre,
+ * Gabriel Le Breton
+ *
+ * Dans le cadre du cours
+ * 8INF341 - Systèmes d'exploitation
+ ****************************************************************/
+
 #include <fstream>
 #include <vector>
 #include <iostream>
@@ -23,7 +35,6 @@ struct file
     uint16_t taille;
     uint8_t premierBloc;
 };
-
 
 /****************************************************************
  * Headers
@@ -81,8 +92,6 @@ private:
     unsigned short runningtime, LastTime;
     struct timeb tp;
     vector<file> fileList;
-	
-	
 };
 
 /****************************************************************
