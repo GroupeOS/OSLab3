@@ -137,6 +137,11 @@ file HardDrive::readfile(uint8_t NumeroFicher)
 		memcpy(&newfile,TampLecture,sizeof(file));
 		return newfile;
 	}
+	else
+	{
+		// Ne devrait jamais etre atteint
+		exit(-1);
+	}
 }
 
 void HardDrive::writefile(uint8_t NumeroFicher, file fichier)
@@ -146,9 +151,7 @@ void HardDrive::writefile(uint8_t NumeroFicher, file fichier)
 		writeInfile(NumeroFicher*9,6,&fichier.nom);
 		writeInfile(NumeroFicher*9+6,2,&fichier.taille);
 		writeInfile(NumeroFicher*9+8,1,&fichier.premierBloc);
-		
 	}
-	
 }
 
 void HardDrive::readFAT(uint8_t NumeroBlock, uint8_t*& TampLecture)
@@ -364,8 +367,8 @@ void OS::ManageFile()
 {
 	int pos, nbChar;
 	char randChar;
-	randChar = 97 + lrand48()%8;
-	pos = lrand48()%MAX_FILESIZE;
+	randChar = 97 + rand()%8;
+	pos = rand()%MAX_FILESIZE;
 	vector<file>::iterator itFile;
 	
 	char fileName[] = " .txt";
@@ -384,7 +387,7 @@ void OS::ManageFile()
 	
 	char* buffer;
 	
-	int action = lrand48()%3;
+	int action = rand()%3;
 	if(!exist)
 		action = 0;
 	switch (action)
@@ -392,7 +395,7 @@ void OS::ManageFile()
 			// Ecriture d'un fichier
 		case 0:
 		{
-			nbChar = lrand48()%(MAX_FILESIZE - pos);
+			nbChar = rand()%(MAX_FILESIZE - pos);
 			buffer = new char[nbChar];
 			file tmpFile;
 			for(int i=0; i<6; i++)
@@ -484,10 +487,10 @@ void OS::AfficherHardDrive()
 		HDList.push_back(lireFichier(i));
 	}
 	
-	vector<file>::iterator itFile = HDList.begin();
+	vector<file>::iterator itFile;
 	
 	cout << "Liste des fichiers" << endl;
-	for(itFile; itFile != HDList.end(); itFile++)
+	for(itFile = HDList.begin(); itFile != HDList.end(); itFile++)
 	{
 		int dernierBloc = itFile->premierBloc + itFile->taille;
 		cout << itFile->nom << " " << itFile->premierBloc << " " << dernierBloc << " ";
