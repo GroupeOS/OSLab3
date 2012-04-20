@@ -36,6 +36,7 @@ struct file
     uint8_t premierBloc;
 };
 
+
 /****************************************************************
  * Headers
  ****************************************************************/
@@ -69,11 +70,11 @@ public:
 	OS();
 	~OS();
 	void Run();
+	void read(char nomFichier[6], int pos, int nbCaracteres, string tampLecture);
+	void write(char nomFichier[6], int pos, int nbCaracteres, char* TampEcriture);
+	void deleteEOF(char nomFichier[6], int pos);
 	
 private:
-	void read(char nomFichier[6], int pos, int nbCaracteres, string tampLecture);
-	void write(char NomFichiers [6], int position, int NombreCaracteres, char* TampEcriture);
-	void deleteEOF(char NomFichiers[6], int position);
 	void ManageFile();
 	void AfficherStat();
 	void AfficherHardDrive();
@@ -83,15 +84,19 @@ private:
 	void ecrireFat(uint8_t pos, uint8_t val);
 	void lireBloc(uint8_t pos, char* output);
 	void ecrireBloc(uint8_t pos, char data[4]);
-	file trouverFichier(char nomFichier[6], bool create = false);
+	file trouverFichier(char nomFichier[6], bool create = false, int *pos = NULL);
 	void creerFichierBlocVide(bool force);
 	int blocSuivant(uint8_t bloc);
+	void freeBloc(int bloc);
+	int newBloc();
 	
     HardDrive HD;
     int currInstruction;
     unsigned short runningtime, LastTime;
     struct timeb tp;
     vector<file> fileList;
+	
+	
 };
 
 /****************************************************************
@@ -237,7 +242,7 @@ void OS::Run()
 void OS::read(char nomFichier[6], int pos, int nbCaracteres, string tampLecture)
 {
 	file fichier = trouverFichier(nomFichier);
-	if (strcmp(fichier.nom, "    ")==0)
+	if (strcmp(fichier.nom, "     ")==0)
 		return;
 	if (fichier.taille < pos+nbCaracteres)
 		return;
@@ -245,15 +250,7 @@ void OS::read(char nomFichier[6], int pos, int nbCaracteres, string tampLecture)
 	int bloc = fichier.premierBloc;
 	for (int i = 0; i < pos/4; i++)
 	{
-		int temp = blocSuivant(bloc);
-		if (bloc == temp)
-		{
-			break;
-		}
-		else
-		{
-			bloc = temp;
-		}
+		bloc = blocSuivant(bloc);
 	}
 	for (int i = pos/4; i <= (pos+nbCaracteres)/4; i++)
 	{
@@ -263,28 +260,107 @@ void OS::read(char nomFichier[6], int pos, int nbCaracteres, string tampLecture)
 		
 		tampLecture.append(data, 4);
 		
-		int temp = blocSuivant(bloc);
-		if (bloc == temp)
-		{
-			break;
-		}
-		else
-		{
-			bloc = temp;
-		}
+		bloc = blocSuivant(bloc);
 	}
 	int firstCaractToRemove = pos - ((pos/4)*4);
 	tampLecture = tampLecture.substr(firstCaractToRemove, nbCaracteres);
 }
 
-void OS::write(char NomFichiers [6], int position, int NombreCaracteres, char* TampEcriture)
+void OS::write(char nomFichier[6], int pos, int nbCaracteres, char* TampEcriture)
 {
-	//cout << "WRITE " << NomFichiers << " " << position << " " << NombreCaracteres << endl;
+	int var;
+	file fichier = trouverFichier(nomFichier, true, &var);
+	if (strcmp(fichier.nom, "     ")==0)
+		return;
+	
+	if (fichier.taille < pos+nbCaracteres)
+	{
+		int dernierBloc = fichier.taille/4;
+		int nouveauDernierBloc = (pos+nbCaracteres)/4;
+		int blocAjouter = nouveauDernierBloc - dernierBloc;
+		int bloc = file.premierBloc;
+		int lastBloc;
+		while (bloc != -1)
+		{
+			lastBloc = bloc;
+			bloc = blocSuivant(bloc);
+		}
+		for (int i=0; i < blocAjouter; i++)
+		{
+			int nouveauBlocLibre = newBloc();
+			if (nouveauBlocLibre == -1)
+				return;
+			
+			ecrireFat(lastBloc, nouveauBlocLibre);
+			lastBloc = blocSuivant(lastBloc);
+		}
+		fichier.taille = pos+nbCaracteres;
+		ecrireFichier(var, fichier);
+	}
+	int bloc = fichier.premierBloc;
+	
+	for (int i = 0; i < pos/4; i++)
+	{
+		bloc = blocSuivant(bloc);
+	}
+	for (int i = pos/4; i <= (pos+nbCaracteres)/4; i++)
+	{
+		char data[4];
+		
+		if (i*4 < pos)
+		{
+			lireBloc(bloc, data);
+			for (int j = pos%4; j < 4; j++)
+			{
+				data[j] = tampEcriture[0];
+				tampEcriture = tampEcriture.substring(1, tampEcriture.length);
+			}
+			ecrireBloc(bloc, data);
+		}
+		else if (i*4 > pos+nbCaracteres)
+		{
+			lireBloc(bloc, data);
+			for (int j = 0; j < pos+nbCaracteres%4; j++)
+			{
+				data[j] = tampEcriture[0];
+				tampEcriture = tampEcriture.substring(1, tampEcriture.length);
+			}
+			ecrireBloc(bloc, data);
+		}
+		else
+		{
+			for (int j = 0; j < 4; j++)
+			{
+				data[j] = tampEcriture[0];
+				tampEcriture = tampEcriture.substring(1, tampEcriture.length);
+			}
+			ecrireBloc(bloc, data);
+		}			
+		bloc = blocSuivant(bloc);
+	}
 }
 
-void OS::deleteEOF(char NomFichiers[6], int position)
+void OS::deleteEOF(char nomFichier[6], int pos)
 {
-	//cout << "DELETE " << NomFichiers << " " << position << endl;
+	file fichier = trouverFichier(nomFichier);
+	if (strcmp(fichier.nom, "     ")==0)
+		return;
+	if (fichier.taille < pos)
+		return;
+	fichier.taille = pos;
+	int bloc = fichier.premierBloc
+	for(int i=0; i <= pos/4; i++)
+	{
+		bloc = blocSuivant(bloc);
+	}
+	int prochainBloc = blocSuivant(bloc);
+	while (bloc != -1)
+	{
+		ecrireBloc(bloc, bloc);
+		free(bloc);
+		bloc = prochainBloc;
+		prochainBloc = blocSuivant(bloc);
+	}
 }
 
 void OS::ManageFile()
@@ -457,7 +533,7 @@ void OS::ecrireBloc(uint8_t pos, char data[4])
 	HD.writeBlock(pos, data);
 }
 
-file OS::trouverFichier(char nomFichier[6], bool create)
+file OS::trouverFichier(char nomFichier[6], bool create = false, int *pos = NULL)
 {
 	
 	for(int i=1; i < 10; i++)
@@ -466,6 +542,10 @@ file OS::trouverFichier(char nomFichier[6], bool create)
 		fichier = lireFichier(i);
 		if(strcmp(nomFichier, fichier.nom) == 0)
 		{
+			if (pos != NULL)
+			{
+				(*pos) = i;
+			}
 			return fichier;
 		}
 	}
@@ -475,22 +555,31 @@ file OS::trouverFichier(char nomFichier[6], bool create)
 		{
 			file fichier;
 			fichier = lireFichier(i);
-			if(strcmp("    ", fichier.nom) == 0)
+			if(strcmp("     ", fichier.nom) == 0)
 			{
 				strcpy(fichier.nom, nomFichier);
-				fichier.taille = 0; //taille 0: aucun bloc d'alloué
+				fichier.taille = 0;	//taille 0: aucun bloc d'alloué
 				fichier.premierBloc = 0;
 				
 				ecrireFichier(i, fichier);
-				
+				if (pos != NULL)
+				{
+					pos = new int;
+					(*pos) = i;
+				}
 				return fichier;
 			}
 		}
 	}
 	file vide;
-	strcpy(vide.nom,  "    ");
+	strcpy(vide.nom,  "     ");
 	vide.taille = 0;
 	vide.premierBloc = 0;
+	if (pos != NULL)
+	{
+		pos = new int;
+		(*pos) = -1;
+	}
 	return vide;
 }
 
@@ -522,6 +611,28 @@ int OS::blocSuivant(uint8_t bloc)
 	if (retour == bloc)
 		return -1;
 	return retour;
+}
+
+void OS::freeBloc(int bloc)
+{
+	file free = lireFichier(0);
+	ecrireBloc(bloc, free.premierBloc);
+	file.premierBloc = bloc;
+	free.taille += 4;
+	ecrireFichier(0, free);
+}
+	
+int OS::newBloc()
+{
+	file free = lireFichier(0);
+	if (free.size == 0)
+		return -1;
+	
+	int prochainBlocLibre= lireFat(free.premierBloc);
+	ecrireFat(bloc,bloc);
+	free.taille -= 4;
+	ecrireFichier(0, free);
+	return free.premierBloc;
 }
 
 int main()
