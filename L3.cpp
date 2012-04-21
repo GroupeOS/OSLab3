@@ -77,13 +77,18 @@ private:
 	void ManageFile();
 	void AfficherStat();
 	void AfficherHardDrive();
+	
 	file lireFichier(int pos);
 	void ecrireFichier(int pos, file fichier);
+	
 	uint8_t lireFat(uint8_t pos);
 	void ecrireFat(uint8_t pos, uint8_t val);
+	
 	void lireBloc(uint8_t pos, char* output);
 	void ecrireBloc(uint8_t pos, char data[4]);
+	
 	file trouverFichier(char nomFichier[6], bool create = false, int *pos = NULL);
+	
 	void creerFichierBlocVide(bool force);
 	int blocSuivant(uint8_t bloc);
 	void freeBloc(int bloc);
@@ -108,7 +113,7 @@ HardDrive::HardDrive()
 
 HardDrive::~HardDrive()
 {
-	Deletefile();
+	//Deletefile();
 }
 
 void HardDrive::readBlock(uint8_t NumeroBlock, char*& TampLecture)
@@ -131,11 +136,11 @@ file HardDrive::readfile(uint8_t NumeroFicher)
 {
 	if(NumeroFicher < 10)
 	{
-		file newfile;
+		file tempFile;
 		char* TampLecture;
 		TampLecture = (char*)readInfile(NumeroFicher*9,9);
-		memcpy(&newfile,TampLecture,sizeof(file));
-		return newfile;
+		memcpy(&tempFile,TampLecture,sizeof(file));
+		return tempFile;
 	}
 	else
 	{
@@ -146,11 +151,11 @@ file HardDrive::readfile(uint8_t NumeroFicher)
 
 void HardDrive::writefile(uint8_t NumeroFicher, file fichier)
 {
-	if(NumeroFicher <10)
+	if(NumeroFicher < 10)
 	{
-		writeInfile(NumeroFicher*9,6,&fichier.nom);
-		writeInfile(NumeroFicher*9+6,2,&fichier.taille);
-		writeInfile(NumeroFicher*9+8,1,&fichier.premierBloc);
+		writeInfile(NumeroFicher * 9, 6, fichier.nom);
+		writeInfile(NumeroFicher * 9 + 6, 2, &fichier.taille);
+		writeInfile(NumeroFicher * 9 + 8, 1, &fichier.premierBloc);
 	}
 }
 
@@ -172,7 +177,7 @@ void HardDrive::writeFAT (uint8_t NumeroBlock, uint8_t TampEcriture)
 
 void HardDrive::Preparefile()
 {
-	char data= ' ';
+	char data= '0';
 	ofstream fileOut("HD.DH");
 	for(int i=0;i<(90+256+1024);i++)
 	{
@@ -242,7 +247,7 @@ void OS::Run()
 void OS::read(char nomFichier[6], int pos, int nbCaracteres, string tampLecture)
 {
 	file fichier = trouverFichier(nomFichier);
-	if (strcmp(fichier.nom, "     ")==0)
+	if (strncmp(fichier.nom, "000000", 6) == 0)
 		return;
 	if (fichier.taille < pos+nbCaracteres)
 		return;
@@ -270,7 +275,7 @@ void OS::write(char nomFichier[6], int pos, int nbCaracteres, string TampEcritur
 {
 	int var;
 	file fichier = trouverFichier(nomFichier, true, &var);
-	if (strcmp(fichier.nom, "     ")==0)
+	if (strncmp(fichier.nom, "000000", 6)==0)
 		return;
 	
 	if (fichier.taille < pos+nbCaracteres)
@@ -313,7 +318,8 @@ void OS::write(char nomFichier[6], int pos, int nbCaracteres, string TampEcritur
 			for (int j = pos%4; j < 4; j++)
 			{
 				data[j] = TampEcriture[0];
-				TampEcriture = TampEcriture.substr(1, TampEcriture.length());
+				if (TampEcriture.length() >= 1)
+					TampEcriture = TampEcriture.substr(1, TampEcriture.length());
 			}
 			ecrireBloc(bloc, data);
 		}
@@ -323,7 +329,8 @@ void OS::write(char nomFichier[6], int pos, int nbCaracteres, string TampEcritur
 			for (int j = 0; j < pos+nbCaracteres%4; j++)
 			{
 				data[j] = TampEcriture[0];
-				TampEcriture = TampEcriture.substr(1, TampEcriture.length());
+				if (TampEcriture.length() >= 1)
+					TampEcriture = TampEcriture.substr(1, TampEcriture.length());
 			}
 			ecrireBloc(bloc, data);
 		}
@@ -332,7 +339,8 @@ void OS::write(char nomFichier[6], int pos, int nbCaracteres, string TampEcritur
 			for (int j = 0; j < 4; j++)
 			{
 				data[j] = TampEcriture[0];
-				TampEcriture = TampEcriture.substr(1, TampEcriture.length());
+				if (TampEcriture.length() >= 1)
+					TampEcriture = TampEcriture.substr(1, TampEcriture.length());
 			}
 			ecrireBloc(bloc, data);
 		}			
@@ -343,7 +351,7 @@ void OS::write(char nomFichier[6], int pos, int nbCaracteres, string TampEcritur
 void OS::deleteEOF(char nomFichier[6], int pos)
 {
 	file fichier = trouverFichier(nomFichier);
-	if (strcmp(fichier.nom, "     ")==0)
+	if (strncmp(fichier.nom, "000000", 6) == 0)
 		return;
 	if (fichier.taille < pos)
 		return;
@@ -367,18 +375,18 @@ void OS::ManageFile()
 {
 	int pos, nbChar;
 	char randChar;
-	randChar = 97 + rand()%8;
-	pos = rand()%MAX_FILESIZE;
+	randChar = 97 + rand() % 8;
+	pos = rand() % MAX_FILESIZE;
 	vector<file>::iterator itFile;
 	
-	char fileName[] = " .txt";
+	char fileName[6] = " .txt";
 	fileName[0] = randChar;
 	
 	bool exist = false;
 	itFile = fileList.begin();
 	while(itFile != fileList.end() && !exist)
 	{
-		if(!strcmp(itFile->nom,fileName)) //Return 0 si les strings sont pareils
+		if(strncmp(itFile->nom,fileName, 6) == 0) //Return 0 si les strings sont pareils
 		{
 			exist = true;
 		}
@@ -387,7 +395,7 @@ void OS::ManageFile()
 	
 	char* buffer;
 	
-	int action = rand()%3;
+	int action = rand() % 3;
 	if(!exist)
 		action = 0;
 	switch (action)
@@ -395,7 +403,7 @@ void OS::ManageFile()
 			// Ecriture d'un fichier
 		case 0:
 		{
-			nbChar = rand()%(MAX_FILESIZE - pos);
+			nbChar = rand() % (MAX_FILESIZE - pos);
 			buffer = new char[nbChar];
 			file tmpFile;
 			for(int i=0; i<6; i++)
@@ -465,10 +473,7 @@ void OS::AfficherHardDrive()
 	{
 		for (int j = 1; j <= 8; j++)
 		{
-			//PAS BON MERDE
-			//read(fileName, pos, nbChar, buffer);
-			HD.readBlock(k, buffer);
-			//PAS BON!!
+			lireBloc(k, buffer);
 			cout << "0x";
 			cout << setfill ('0') << setw (2);
 			cout << hex << k; //hex traduit les int en hexadecimal sur 3 charactère
@@ -482,6 +487,7 @@ void OS::AfficherHardDrive()
 	
 	vector<file> HDList;
 	
+	// Parcourt de la liste des 8 fichiers
 	for (int i = 1; i <= 8; i++)
 	{
 		HDList.push_back(lireFichier(i));
@@ -490,11 +496,17 @@ void OS::AfficherHardDrive()
 	vector<file>::iterator itFile;
 	
 	cout << "Liste des fichiers" << endl;
+	int i = 0;
+	
 	for(itFile = HDList.begin(); itFile != HDList.end(); itFile++)
 	{
+		i++;
 		int dernierBloc = itFile->premierBloc + itFile->taille;
-		cout << itFile->nom << " " << itFile->premierBloc << " " << dernierBloc << " ";
+		cout << hex << itFile->nom << " ";
+		cout << "0x" << itFile->premierBloc << " ";
+		cout << hex << "0x" <<dernierBloc << endl;
 	}
+	
 	cout << endl;
 }
 
@@ -540,7 +552,7 @@ file OS::trouverFichier(char nomFichier[6], bool create, int *pos)
 	{
 		file fichier;
 		fichier = lireFichier(i);
-		if(strcmp(nomFichier, fichier.nom) == 0)
+		if(strncmp(nomFichier, fichier.nom, 6) == 0)
 		{
 			if (pos != NULL)
 			{
@@ -555,8 +567,9 @@ file OS::trouverFichier(char nomFichier[6], bool create, int *pos)
 		{
 			file fichier;
 			fichier = lireFichier(i);
-			if(strcmp("     ", fichier.nom) == 0)
+			if(strncmp("000000", fichier.nom, 6) == 0)
 			{
+				
 				strcpy(fichier.nom, nomFichier);
 				fichier.taille = 0;	//taille 0: aucun bloc d'alloué
 				fichier.premierBloc = 0;
@@ -572,7 +585,7 @@ file OS::trouverFichier(char nomFichier[6], bool create, int *pos)
 		}
 	}
 	file vide;
-	strcpy(vide.nom,  "     ");
+	strcpy(vide.nom,  "000000");
 	vide.taille = 0;
 	vide.premierBloc = 0;
 	if (pos != NULL)
