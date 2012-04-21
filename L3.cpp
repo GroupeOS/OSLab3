@@ -208,6 +208,7 @@ void* HardDrive::readInfile(int pos, int lenght)
 void HardDrive::writeInfile(int pos,int lenght, void* data)
 {
 	ofstream fileOut("HD.DH",ios::out | ios::in | ios::binary);
+	fileOut << dec;
 	if(fileOut != NULL)
 	{
 		fileOut.seekp(pos,ios_base::beg);
@@ -224,6 +225,7 @@ void HardDrive::writeInfile(int pos,int lenght, void* data)
 
 OS::OS()
 {
+	creerFichierBlocVide(true);
 	currInstruction = 1;
 	runningtime = 0;
 	LastTime = 0;
@@ -501,10 +503,11 @@ void OS::AfficherHardDrive()
 	for(itFile = HDList.begin(); itFile != HDList.end(); itFile++)
 	{
 		i++;
-		int dernierBloc = itFile->premierBloc + itFile->taille;
-		cout << hex << itFile->nom << " ";
-		cout << "0x" << itFile->premierBloc << " ";
-		cout << hex << "0x" <<dernierBloc << endl;
+		int premierBloc = itFile->premierBloc;
+		int dernierBloc = premierBloc + itFile->taille;
+		cout << itFile->nom << " ";
+		cout << hex << "0x" << premierBloc << " ";
+		cout << hex << "0x" << dernierBloc << endl;
 	}
 	
 	cout << endl;
@@ -547,7 +550,6 @@ void OS::ecrireBloc(uint8_t pos, char data[4])
 
 file OS::trouverFichier(char nomFichier[6], bool create, int *pos)
 {
-	
 	for(int i=1; i < 10; i++)
 	{
 		file fichier;
@@ -569,10 +571,9 @@ file OS::trouverFichier(char nomFichier[6], bool create, int *pos)
 			fichier = lireFichier(i);
 			if(strncmp("000000", fichier.nom, 6) == 0)
 			{
-				
 				strcpy(fichier.nom, nomFichier);
 				fichier.taille = 0;	//taille 0: aucun bloc d'alloué
-				fichier.premierBloc = 0;
+				fichier.premierBloc = newBloc();
 				
 				ecrireFichier(i, fichier);
 				if (pos != NULL)
