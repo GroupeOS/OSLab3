@@ -85,7 +85,7 @@ private:
 	uint8_t lireFat(uint8_t pos);
 	void ecrireFat(uint8_t pos, uint8_t val);
 	
-	void lireBloc(uint8_t pos, char* output);
+	void lireBloc(uint8_t pos, char*& output);
 	void ecrireBloc(uint8_t pos, char data[4]);
 	
 	file trouverFichier(char nomFichier[6], bool create = false, int *pos = NULL);
@@ -262,7 +262,7 @@ void OS::read(char nomFichier[6], int pos, int nbCaracteres, string tampLecture)
 	}
 	for (int i = pos/4; i <= (pos+nbCaracteres)/4; i++)
 	{
-		char data[4];
+		char* data = new char[4];
 		
 		lireBloc(bloc, data);
 		
@@ -298,9 +298,9 @@ void OS::write(char nomFichier[6], int pos, int nbCaracteres, string TampEcritur
 			int nouveauBlocLibre = newBloc();
 			if (nouveauBlocLibre == -1)
 				return;
-			
 			ecrireFat(lastBloc, nouveauBlocLibre);
 			lastBloc = blocSuivant(lastBloc);
+			
 		}
 		fichier.taille = pos+nbCaracteres;
 		ecrireFichier(var, fichier);
@@ -310,10 +310,12 @@ void OS::write(char nomFichier[6], int pos, int nbCaracteres, string TampEcritur
 	for (int i = 0; i < pos/4; i++)
 	{
 		bloc = blocSuivant(bloc);
+		if (bloc == -1)
+			return;
 	}
 	for (int i = pos/4; i <= (pos+nbCaracteres)/4; i++)
 	{
-		char data[4];
+		char* data = new char [4];
 		
 		if (i*4 < pos)
 		{
@@ -364,13 +366,14 @@ void OS::deleteEOF(char nomFichier[6], int pos)
 	{
 		bloc = blocSuivant(bloc);
 	}
-	int prochainBloc = blocSuivant(bloc);
+	ecrireFat(bloc, bloc);
+	bloc = blocSuivant(bloc);
 	while (bloc != -1)
 	{
+		int prochainBloc = blocSuivant(bloc);
 		ecrireFat(bloc, bloc);
 		freeBloc(bloc);
 		bloc = prochainBloc;
-		prochainBloc = blocSuivant(bloc);
 	}
 }
 
@@ -480,7 +483,8 @@ void OS::AfficherHardDrive()
 			cout << "0x";
 			cout << setfill ('0') << setw (2);
 			cout << hex << k; //hex traduit les int en hexadecimal sur 3 charactère
-			cout  << " " << buffer << "  ";
+			cout << " " <<  setfill(' ') << setw(4);
+			cout << buffer << "  ";
 			
 			k++;
 		}
@@ -509,6 +513,7 @@ void OS::AfficherHardDrive()
 		cout << itFile->nom << " ";
 		cout << hex << "0x" << premierBloc << " ";
 		cout << hex << "0x" << dernierBloc << endl;
+		cout << dec;
 	}
 	
 	cout << endl;
@@ -539,7 +544,7 @@ void OS::ecrireFat(uint8_t pos, uint8_t val)
 	HD.writeFAT(pos, val);
 }
 
-void OS::lireBloc(uint8_t pos, char* output)
+void OS::lireBloc(uint8_t pos, char*& output)
 {
 	HD.readBlock(pos, output);
 }
@@ -600,17 +605,20 @@ file OS::trouverFichier(char nomFichier[6], bool create, int *pos)
 
 void OS::creerFichierBlocVide(bool force)
 {
+	file free;      //fichier de bloc libreile free;
 	if (!force)
 	{
-		file fichier = lireFichier(0);
-		if (strcmp(fichier.nom, "free.")!=0)
+		free = lireFichier(0);
+		if (strcmp(free.nom, "free.")!=0)
 			return;
 	}   
 	
-	file free;      //fichier de bloc libre
+
 	strcpy(free.nom,"free.");
 	free.taille = 1024;
 	free.premierBloc = 0;
+	
+	ecrireFichier(0, free);
 	for(int i = 0; i < 256; i++)
 	{
 		if (i == 255)
@@ -631,7 +639,14 @@ int OS::blocSuivant(uint8_t bloc)
 void OS::freeBloc(int bloc)
 {
 	file free = lireFichier(0);
-	ecrireFat(bloc, free.premierBloc);
+	if (free.taille == 0)
+	{
+		ecrireFat(bloc, bloc);
+	}
+	else
+	{
+		ecrireFat(bloc, free.premierBloc);
+	}
 	free.premierBloc = bloc;
 	free.taille += 4;
 	ecrireFichier(0, free);
@@ -640,7 +655,7 @@ void OS::freeBloc(int bloc)
 int OS::newBloc()
 {
 	file free = lireFichier(0);
-	if (free.taille == 0)
+	if (free.taille <= 0)
 		return -1;
 	
 	int bloc = free.premierBloc;
