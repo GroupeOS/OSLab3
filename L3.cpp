@@ -22,7 +22,7 @@
 #include <stdint.h> // Pour les uint8_t
 
 #define QTE_INSTRUCTIONS 2000000 //Max de cette valeur: Valeur maximum d'un int (4294967294 max pour un unsigned int)
-#define MAX_FILESIZE 128 //8 fichiers dans 1024
+#define MAX_FILESIZE 120 //8 fichiers dans 1024
 
 using namespace std;
 
@@ -509,11 +509,23 @@ void OS::AfficherHardDrive()
 	{
 		i++;
 		int premierBloc = itFile->premierBloc;
-		int dernierBloc = premierBloc + itFile->taille;
+		int dernierBloc;
+		
+		// Parcourt des blocs pour obtenir le dernier bloc d'un fichier
+		int blocCourant = premierBloc;
+		while (blocCourant != -1)
+		{
+			dernierBloc = blocCourant;
+			blocCourant = blocSuivant(blocCourant);
+		}
+
 		cout << itFile->nom << " ";
-		cout << hex << "0x" << premierBloc << " ";
-		cout << hex << "0x" << dernierBloc << endl;
-		cout << dec;
+		cout << "0x";
+		cout << setfill ('0') << setw (2);
+		cout << hex << premierBloc << " ";		
+		cout << "0x";
+		cout << setfill ('0') << setw (2);
+		cout << hex << dernierBloc << endl;
 	}
 	
 	cout << endl;
