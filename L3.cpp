@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <sys/timeb.h>
 #include <string>
+#include <stdint.h> // Pour les uint8_t
 
 #define QTE_INSTRUCTIONS 2000000 //Max de cette valeur: Valeur maximum d'un int (4294967294 max pour un unsigned int)
 #define MAX_FILESIZE 128 //8 fichiers dans 1024
