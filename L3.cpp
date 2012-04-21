@@ -154,6 +154,7 @@ void HardDrive::writefile(uint8_t NumeroFicher, file fichier)
 {
 	if(NumeroFicher < 10)
 	{
+		// Chaque fichier a 9 octets de longueur
 		writeInfile(NumeroFicher * 9, 6, fichier.nom);
 		writeInfile(NumeroFicher * 9 + 6, 2, &fichier.taille);
 		writeInfile(NumeroFicher * 9 + 8, 1, &fichier.premierBloc);
@@ -206,14 +207,16 @@ void* HardDrive::readInfile(int pos, int lenght)
 	return buffer;
 }
 
-void HardDrive::writeInfile(int pos,int lenght, void* data)
+void HardDrive::writeInfile(int pos, int lenght, void* data)
 {
-	ofstream fileOut("HD.DH",ios::out | ios::in | ios::binary);
-	fileOut << dec;
+	ofstream fileOut("HD.DH", ios::in | ios::out | ios::binary);
 	if(fileOut != NULL)
 	{
-		fileOut.seekp(pos,ios_base::beg);
-		fileOut.write((char*)data, lenght);
+		char* chaineAEcrire = (char*)data;
+		fileOut.seekp(pos, ios_base::beg);
+
+		fileOut.write(chaineAEcrire, lenght);
+
 		fileOut.close();
 	}
 }
@@ -233,8 +236,10 @@ OS::OS()
 	ftime(&tp);
 	LastTime = tp.millitm;
 }
+
 OS::~OS()
 {
+	cout << "OS Terminated \n";
 }
 
 void OS::Run()
@@ -256,20 +261,20 @@ void OS::read(char nomFichier[6], int pos, int nbCaracteres, string tampLecture)
 		return;
 	
 	int bloc = fichier.premierBloc;
+	
 	for (int i = 0; i < pos/4; i++)
 	{
 		bloc = blocSuivant(bloc);
 	}
+	
 	for (int i = pos/4; i <= (pos+nbCaracteres)/4; i++)
 	{
 		char* data = new char[4];
-		
 		lireBloc(bloc, data);
-		
 		tampLecture.append(data, 4);
-		
 		bloc = blocSuivant(bloc);
 	}
+	
 	int firstCaractToRemove = pos - ((pos/4)*4);
 	tampLecture = tampLecture.substr(firstCaractToRemove, nbCaracteres);
 }
@@ -278,13 +283,14 @@ void OS::write(char nomFichier[6], int pos, int nbCaracteres, string TampEcritur
 {
 	int var;
 	file fichier = trouverFichier(nomFichier, true, &var);
+	
 	if (strncmp(fichier.nom, "000000", 6)==0)
 		return;
 	
 	if (fichier.taille < pos+nbCaracteres)
 	{
-		int dernierBloc = fichier.taille/4;
-		int nouveauDernierBloc = (pos+nbCaracteres)/4;
+		int dernierBloc = fichier.taille / 4;
+		int nouveauDernierBloc = (pos+nbCaracteres) / 4;
 		int blocAjouter = nouveauDernierBloc - dernierBloc;
 		int bloc = fichier.premierBloc;
 		int lastBloc;
@@ -305,22 +311,24 @@ void OS::write(char nomFichier[6], int pos, int nbCaracteres, string TampEcritur
 		fichier.taille = pos+nbCaracteres;
 		ecrireFichier(var, fichier);
 	}
+	
 	int bloc = fichier.premierBloc;
 	
-	for (int i = 0; i < pos/4; i++)
+	for (int i = 0; i < pos / 4; i++)
 	{
 		bloc = blocSuivant(bloc);
 		if (bloc == -1)
 			return;
 	}
-	for (int i = pos/4; i <= (pos+nbCaracteres)/4; i++)
+	
+	for (int i = pos / 4; i <= (pos+nbCaracteres)/4; i++)
 	{
 		char* data = new char [4];
 		
 		if (i*4 < pos)
 		{
 			lireBloc(bloc, data);
-			for (int j = pos%4; j < 4; j++)
+			for (int j = pos % 4; j < 4; j++)
 			{
 				data[j] = TampEcriture[0];
 				if (TampEcriture.length() >= 1)
@@ -328,10 +336,10 @@ void OS::write(char nomFichier[6], int pos, int nbCaracteres, string TampEcritur
 			}
 			ecrireBloc(bloc, data);
 		}
-		else if (i*4 > pos+nbCaracteres)
+		else if (i * 4 > pos + nbCaracteres)
 		{
 			lireBloc(bloc, data);
-			for (int j = 0; j < pos+nbCaracteres%4; j++)
+			for (int j = 0; j < pos + nbCaracteres % 4; j++)
 			{
 				data[j] = TampEcriture[0];
 				if (TampEcriture.length() >= 1)
@@ -362,7 +370,7 @@ void OS::deleteEOF(char nomFichier[6], int pos)
 		return;
 	fichier.taille = pos;
 	int bloc = fichier.premierBloc;
-	for(int i=0; i <= pos/4; i++)
+	for(int i = 0; i <= pos / 4; i++)
 	{
 		bloc = blocSuivant(bloc);
 	}
@@ -456,11 +464,7 @@ void OS::AfficherStat()
 	runningtime = (tp.millitm-LastTime);
 	
 	if (runningtime >= 5000)
-	{
-		//system("clear");
-		
-		//cout << "Affiche" <<  runningtime << endl;
-		
+	{		
 		AfficherHardDrive();
 		runningtime = 0;
 		ftime(&tp);
@@ -519,6 +523,7 @@ void OS::AfficherHardDrive()
 			blocCourant = blocSuivant(blocCourant);
 		}
 
+		// Affichage des informations des fichiers
 		cout << itFile->nom << " ";
 		cout << "0x";
 		cout << setfill ('0') << setw (2);
